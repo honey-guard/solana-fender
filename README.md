@@ -4,7 +4,13 @@ Solana static analysis tool built in rust for anchor programs.
 
 ## ⚙️ Installation
 
-#### From Source
+#### Install via Cargo ( Recommended )
+
+```bash
+cargo install solana-fender
+```
+
+#### Install via Source
 
 ```bash
 git clone https://github.com/honey-guard/solana-fender.git
@@ -14,6 +20,12 @@ cargo build
 
 ## Usage
 
+#### Cargo
+```bash
+solana-fender --program <path-to-program>
+```
+
+#### Source
 ```bash
 cargo run -- --program <path-to-program>
 ```
