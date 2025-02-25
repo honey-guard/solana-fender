@@ -1,5 +1,5 @@
 # Solana Fender
-![License: MIT](https://img.shields.io/badge/License-MIT-red.svg) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender)  
+![License: MIT](https://img.shields.io/badge/License-MIT-red.svg) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender) <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/honey-guard/solana-fender/rust.yml">
 
 Solana static analysis tool built in rust for anchor programs.
 
@@ -20,6 +20,8 @@ cargo build
 ```
 
 ## Usage
+
+Tip: Clone [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks) as a test case to sample this program.
 
 #### Cargo
 ```bash
