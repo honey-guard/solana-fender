@@ -1,1 +1,3 @@
 /target
+/examples/*/node_modules
+/examples/*/target

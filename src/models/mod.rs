@@ -3,6 +3,10 @@ use syn::File;
 use std::collections::HashMap;
 use anyhow::Result;
 use walkdir::WalkDir;
+use syn::{Item, ItemMod};
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use anyhow::anyhow;
 
 #[derive(Debug)]
 pub struct Program {
@@ -39,6 +43,47 @@ impl Program {
         Ok(Program {
             asts,
             root_path: path,
+        })
+    }
+
+    /// Create a Program from an Anchor program module
+    pub fn from_module<T>(program_module: T) -> Result<Self> {
+        let mut asts = HashMap::new();
+        
+        // Get the module name
+        let module_name = std::any::type_name::<T>();
+        
+        // Create a synthetic file path for the module
+        let file_path = PathBuf::from(format!("{}.rs", module_name));
+        
+        // For now, we'll create a minimal AST with a placeholder
+        // In a real implementation, we would extract the AST from the module
+        // using reflection or other techniques
+        
+        // Create a synthetic module structure
+        let module_content = quote! {
+            use anchor_lang::prelude::*;
+            
+            #[program]
+            pub mod synthetic_module {
+                use super::*;
+                
+                // Placeholder for actual module content
+                // This would be populated with the actual module content in a real implementation
+            }
+            
+            #[derive(Accounts)]
+            pub struct Initialize {}
+        };
+        
+        let file = syn::parse2::<File>(module_content)
+            .map_err(|e| anyhow!("Failed to parse module: {}", e))?;
+        
+        asts.insert(file_path.clone(), file);
+        
+        Ok(Program {
+            asts,
+            root_path: PathBuf::from("."),
         })
     }
 }
