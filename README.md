@@ -112,6 +112,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | Unauthorized Access | ✅ |✅ |❓ |❓ |
 | Integer Overflow | ✅ |✅ |✅ |❓ |
 
-`❓` - Could not find documentation if supported.
+- `❓` - Could not find documentation if supported.
+- `🚧` - Did not pass all [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)
 
 ```If there is any inaccuracy or updating needed, pull request or issue and we will try to update the table.```
