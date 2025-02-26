@@ -102,7 +102,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | Account Data Matching | ✅ |✅ |✅ |✅ |
 | Account Initialization | ✅ |✅ | ✅|✅ |
 | Arbitrary CPI | ✅ |✅ |❓ |✅ |
-| Closing Accounts | ✅ |✅ |❓ |✅ |
+| Closing Accounts | ✅ |✅ |❓ |🚧 |
 | Duplicate Mutable Accounts | ✅ |✅ |❓ |✅ |
 | Missing Bump Seed Canonicalization | ✅ |✅ |✅ |✅ |
 | PDA Sharing | ✅ |✅ | ✅|✅ |
