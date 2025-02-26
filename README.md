@@ -82,9 +82,9 @@ This allows you to integrate security checks directly into your test suite, ensu
 
 Below is a comparison of various static analysis tools available for Solana smart contracts written in Rust/Anchor:
 
-[X-Ray (Demo) by sec3.dev](https://github.com/sec3-product/x-ray/tree/main)
-[radar by Auditware](https://github.com/Auditware/radar)
-[l3x by VulnPlanet](https://github.com/VulnPlanet/l3x/tree/main)
+- [X-Ray (Demo) by sec3.dev](https://github.com/sec3-product/x-ray/tree/main)
+- [radar by Auditware](https://github.com/Auditware/radar)
+- [l3x by VulnPlanet](https://github.com/VulnPlanet/l3x/tree/main)
 
 | Feature | Fender | l3x | X-Ray | radar |
 |---------|--------------|--------|--------|--------|
@@ -112,3 +112,6 @@ Below is a comparison of various static analysis tools available for Solana smar
 | Unauthorized Access | ✅ |✅ |❓ |❓ |
 | Integer Overflow | ✅ |✅ |✅ |❓ |
 
+`❓` - Could not find documentation if supported.
+
+```If there is any inaccuracy or updating needed, by pull request or issue and we will try to update the table.```
