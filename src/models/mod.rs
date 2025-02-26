@@ -3,9 +3,7 @@ use syn::File;
 use std::collections::HashMap;
 use anyhow::Result;
 use walkdir::WalkDir;
-use syn::{Item, ItemMod};
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
 use anyhow::anyhow;
 
 #[derive(Debug)]
@@ -15,6 +13,7 @@ pub struct Program {
 }
 
 impl Program {
+    #[allow(dead_code)]
     pub fn new(path: PathBuf) -> Result<Self> {
         let mut asts = HashMap::new();
         
@@ -47,7 +46,8 @@ impl Program {
     }
 
     /// Create a Program from an Anchor program module
-    pub fn from_module<T>(program_module: T) -> Result<Self> {
+    #[allow(dead_code)]
+    pub fn from_module<T>(_program_module: T) -> Result<Self> {
         let mut asts = HashMap::new();
         
         // Get the module name
@@ -89,6 +89,7 @@ impl Program {
 }
 
 // Helper function to find all Rust files in a directory
+#[allow(dead_code)]
 fn find_rust_files(path: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut rust_files = Vec::new();
     

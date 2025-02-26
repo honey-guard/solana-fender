@@ -4,15 +4,21 @@ pub mod models;
 use anyhow::{Result, anyhow};
 use colored::*;
 use std::path::PathBuf;
-use syn::{Item, ItemMod};
-use quote::ToTokens;
 
-use crate::analyzers::{
-    Analyzer, MissingOwnerCheck, AccountDataMatching,
-    AccountInitialization, ArbitraryCpi, ClosingAccounts, DuplicateMutableAccounts,
-    MissingBumpSeedCanonicalization, PdaSharing, TypeCosplay, 
-    ReentrancyAnalyzer, UnauthorizedAccessAnalyzer, IntegerOverflowAnalyzer, InvalidSysvarAccounts
-};
+use crate::analyzers::Analyzer;
+use crate::analyzers::missing_owner::MissingOwnerCheck;
+use crate::analyzers::account_data_matching::AccountDataMatching;
+use crate::analyzers::account_initialization::AccountInitialization;
+use crate::analyzers::arbitrary_cpi::ArbitraryCpi;
+use crate::analyzers::closing_accounts::ClosingAccounts;
+use crate::analyzers::duplicate_mutable_accounts::DuplicateMutableAccounts;
+use crate::analyzers::bump_seed_canonicalization::MissingBumpSeedCanonicalization;
+use crate::analyzers::pda_sharing::PdaSharing;
+use crate::analyzers::type_cosplay::TypeCosplay;
+use crate::analyzers::reentrancy::ReentrancyAnalyzer;
+use crate::analyzers::unauthorized_access::UnauthorizedAccessAnalyzer;
+use crate::analyzers::integer_overflow::IntegerOverflowAnalyzer;
+use crate::analyzers::invalid_sysvar_accounts::InvalidSysvarAccounts;
 use crate::models::Program;
 
 // Re-export types that users of the crate will need

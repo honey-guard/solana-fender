@@ -12,23 +12,11 @@ pub mod arbitrary_cpi;
 pub mod account_initialization;
 pub mod account_data_matching;
 
-
-pub use missing_owner::*;
-pub use reentrancy::ReentrancyAnalyzer;
-pub use unauthorized_access::UnauthorizedAccessAnalyzer;
-pub use integer_overflow::IntegerOverflowAnalyzer;
-pub use closing_accounts::ClosingAccounts;
-pub use bump_seed_canonicalization::MissingBumpSeedCanonicalization;
-pub use duplicate_mutable_accounts::DuplicateMutableAccounts;
-pub use arbitrary_cpi::ArbitraryCpi;
-pub use account_initialization::AccountInitialization;
-pub use account_data_matching::AccountDataMatching;
-pub use invalid_sysvar_accounts::InvalidSysvarAccounts;
-
 // Common traits and types for analyzers
 use crate::models::*;
 use anyhow::Result;
 
+#[allow(dead_code)]
 pub trait Analyzer {
     fn analyze(&self, program: &Program) -> Result<Vec<Finding>>;
     fn name(&self) -> &'static str;
@@ -36,6 +24,7 @@ pub trait Analyzer {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Finding {
     pub severity: Severity,
     pub certainty: Certainty,
@@ -60,6 +49,7 @@ pub enum Certainty {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Location {
     pub file: String,
     pub line: usize,
