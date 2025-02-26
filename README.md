@@ -1,4 +1,4 @@
-# Solana Fender
+# 🛡️ Solana Fender
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-red.svg) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender) <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/honey-guard/solana-fender/rust.yml">
 
@@ -77,3 +77,38 @@ mod tests {
 ```
 
 This allows you to integrate security checks directly into your test suite, ensuring that your program remains secure as you develop it.
+
+## Comparison of Solana Static Analysis Tools
+
+Below is a comparison of various static analysis tools available for Solana smart contracts written in Rust/Anchor:
+
+[X-Ray (Demo) by sec3.dev](https://github.com/sec3-product/x-ray/tree/main)
+[radar by Auditware](https://github.com/Auditware/radar)
+[l3x by VulnPlanet](https://github.com/VulnPlanet/l3x/tree/main)
+
+| Feature | Fender | l3x | X-Ray | radar |
+|---------|--------------|--------|--------|--------|
+| **Languages** | Rust |Rust|C++| Python|
+| **Unit testing** | ✅  | ❌ | ❌ | ❌|
+| **Open Source** | ✅ | ✅ | Demo | ✅ |
+| **Distribution Method** | Cargo | Source |Docker|Docker|
+| **License** | MIT |❌ |AGPL-3.0|GPL-3.0|
+
+### Security Checks
+
+| Security Check | Fender | l3x | X-Ray | radar |
+|----------------|--------------|--------|--------|--------|
+| Missing Owner Check | ✅ |✅ |✅ |✅ |
+| Account Data Matching | ✅ |✅ |✅ |✅ |
+| Account Initialization | ✅ |✅ | ✅|✅ |
+| Arbitrary CPI | ✅ |✅ |❓ |✅ |
+| Closing Accounts | ✅ |✅ |❓ |✅ |
+| Duplicate Mutable Accounts | ✅ |✅ |❓ |✅ |
+| Missing Bump Seed Canonicalization | ✅ |✅ |✅ |✅ |
+| PDA Sharing | ✅ |✅ | ✅|✅ |
+| Type Cosplay | ✅ |✅ |✅ |✅ |
+| Invalid Sysvar Accounts | ✅ |✅ |❓ |✅ |
+| Reentrancy | ✅ |❓ |❓ |❓ |
+| Unauthorized Access | ✅ |✅ |❓ |❓ |
+| Integer Overflow | ✅ |✅ |✅ |❓ |
+
