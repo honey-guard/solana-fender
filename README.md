@@ -114,4 +114,4 @@ Below is a comparison of various static analysis tools available for Solana smar
 
 `❓` - Could not find documentation if supported.
 
-```If there is any inaccuracy or updating needed, by pull request or issue and we will try to update the table.```
+```If there is any inaccuracy or updating needed, pull request or issue and we will try to update the table.```
