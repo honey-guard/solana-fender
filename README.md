@@ -91,7 +91,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | **Languages** | Rust |Rust|C++| Python|
 | **Unit testing** | ✅  | ❌ | ❌ | ❌|
 | **Open Source** | ✅ | ✅ | Demo | ✅ |
-| **Distribution Method** | Cargo | Source |Docker|Docker|
+| **Distribution** | Cargo | Source |Docker|Docker|
 | **License** | MIT |❌ |AGPL-3.0|GPL-3.0|
 
 ### Security Checks
