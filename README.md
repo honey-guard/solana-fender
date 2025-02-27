@@ -94,7 +94,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | **Unit testing** | ✅  | ❌ | ❌ | ❌|
 | **Open Source** | ✅ | ✅ | Demo | ✅ |
 | **Distribution** | Cargo | Source |Docker|Docker|
-| **License** | MIT |❌ |AGPL-3.0|GPL-3.0|
+| **License** | GPL-3.0 |❌ |AGPL-3.0|GPL-3.0|
 
 ### Security Checks
 
