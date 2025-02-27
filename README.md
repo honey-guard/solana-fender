@@ -1,6 +1,6 @@
 # 🛡️ Solana Fender
 
-![License: MIT](https://img.shields.io/badge/License-MIT-red.svg) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender) <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/honey-guard/solana-fender/rust.yml">
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender) <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/honey-guard/solana-fender/rust.yml">
 
 Solana static analysis tool built in rust for anchor programs. Can be used as a rust crate for unit testing or as a CLI tool.
 
@@ -80,6 +80,8 @@ This allows you to integrate security checks directly into your test suite, ensu
 
 ## Comparison of Solana Static Analysis Tools
 
+It is highly encouraged to use as many tools as possible to ensure the security of your program.
+
 Below is a comparison of various static analysis tools available for Solana smart contracts written in Rust/Anchor:
 
 - [X-Ray (Demo) by sec3.dev](https://github.com/sec3-product/x-ray/tree/main)
@@ -88,7 +90,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 
 | Feature | Fender | l3x | X-Ray | radar |
 |---------|--------------|--------|--------|--------|
-| **Languages** | Rust |Rust|C++| Python|
+| **Languages** |Rust|Rust|C++|Python|
 | **Unit testing** | ✅  | ❌ | ❌ | ❌|
 | **Open Source** | ✅ | ✅ | Demo | ✅ |
 | **Distribution** | Cargo | Source |Docker|Docker|
