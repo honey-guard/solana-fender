@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./static/horizontal_cropped.png" alt="solana_fender_logo">
+</p>
+
 # 🛡️ Solana Fender
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Crates.io](https://img.shields.io/crates/v/solana_fender?color=blue)](https://crates.io/crates/solana_fender) <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/honey-guard/solana-fender/rust.yml">
