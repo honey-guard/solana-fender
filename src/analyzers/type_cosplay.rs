@@ -61,8 +61,8 @@ impl<'a> TypeCosplayVisitor<'a> {
             if !self.structs_with_discriminant.contains(struct_name) && 
                !self.structs_with_discriminant_check.contains(struct_name) {
                 self.findings.push(Finding {
-                    severity: Severity::High,
-                    certainty: Certainty::High,
+                    severity: Severity::Low,
+                    certainty: Certainty::Low,
                     message: format!(
                         "Struct {} uses Borsh serialization without a discriminator field. This could enable type confusion attacks. Add a discriminator field or use the Account trait.",
                         struct_name

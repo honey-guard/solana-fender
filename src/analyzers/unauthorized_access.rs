@@ -86,8 +86,8 @@ impl<'ast> Visit<'ast> for AuthorizationVisitor {
         // Only report an issue if there's no runtime check AND no Signer type field
         if !has_check && !has_signer_type_field {
             self.findings.push(Finding {
-                severity: Severity::Critical,
-                certainty: Certainty::Medium,
+                severity: Severity::Low,
+                certainty: Certainty::Low,
                 message: format!(
                     "The instruction '{}' does not validate the caller's authority. \
                      Consider adding an explicit check like 'if !ctx.accounts.authority.is_signer {{ return Err(...) }}'.",

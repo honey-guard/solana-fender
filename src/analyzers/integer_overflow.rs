@@ -17,7 +17,7 @@ impl<'ast> Visit<'ast> for OverflowVisitor {
             if !is_checked_arithmetic(expr) {
                 self.findings.push(Finding {
                     severity: Severity::Medium,
-                    certainty: Certainty::Low,
+                    certainty: Certainty::High,
                     message: format!(
                         "Unchecked arithmetic operation found: {}. \
                          Consider using checked_add, checked_mul, etc., or SafeMath.",

@@ -75,8 +75,8 @@ impl<'a, 'ast> Visit<'ast> for PdaSharingVisitor<'a> {
                 if has_insufficient_seeds {
                     let span = expr.method.span();
                     self.findings.push(Finding {
-                        severity: Severity::High,
-                        certainty: Certainty::High,
+                        severity: Severity::Low,
+                        certainty: Certainty::Low,
                         message: "PDA seeds used for signing are insufficient for unique authority. Seeds only contain mint and bump, allowing potential unauthorized access.".to_string(),
                         location: Location {
                             file: self.file_path.clone(),
@@ -124,8 +124,8 @@ impl<'a> PdaSharingVisitor<'a> {
         if has_insufficient_seeds {
             let span = array.span();
             self.findings.push(Finding {
-                severity: Severity::High,
-                certainty: Certainty::High,
+                severity: Severity::Low,
+                certainty: Certainty::Low,
                 message: "PDA seeds are insufficient for unique authority. Seeds only contain mint and bump, allowing potential unauthorized access.".to_string(),
                 location: Location {
                     file: self.file_path.clone(),

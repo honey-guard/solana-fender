@@ -212,8 +212,8 @@ impl<'a, 'ast> Visit<'ast> for ClosingAccountsVisitor<'a> {
                     
                     if !missing_checks.is_empty() {
                         self.findings.push(Finding {
-                            severity: Severity::High,
-                            certainty: Certainty::High,
+                            severity: Severity::Medium,
+                            certainty: Certainty::Low,
                             message: format!("Function '{}' in module '{}' zeroes account lamports without proper cleanup - vulnerable to reinitialization attacks. Missing: {}",
                                 self.current_fn_name,
                                 self.current_mod_name,

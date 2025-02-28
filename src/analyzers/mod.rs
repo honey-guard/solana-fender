@@ -15,6 +15,7 @@ pub mod account_data_matching;
 // Common traits and types for analyzers
 use crate::models::*;
 use anyhow::Result;
+use std::fmt;
 
 #[allow(dead_code)]
 pub trait Analyzer {
@@ -33,12 +34,24 @@ pub struct Finding {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum Severity {
     Critical,
     High,
     Medium,
-    //Low,
+    Low,
     //Info,
+}
+
+impl fmt::Display for Severity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Severity::Critical => write!(f, "Critical"),
+            Severity::High => write!(f, "High"),
+            Severity::Medium => write!(f, "Medium"),
+            Severity::Low => write!(f, "Low"),
+        }
+    }
 }
 
 #[derive(Debug)]

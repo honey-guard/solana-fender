@@ -88,8 +88,8 @@ impl<'a, 'ast> Visit<'ast> for OwnerCheckVisitor<'a> {
                 // Report findings for each unpack location that doesn't have a program owner check
                 for (line, column) in &self.unpack_locations {
                     self.findings.push(Finding {
-                        severity: Severity::Medium,
-                        certainty: Certainty::Medium,
+                        severity: Severity::Low,
+                        certainty: Certainty::Low,
                         message: format!("SPL Token account data accessed without program owner check (token.owner == spl_token::ID)"),
                         location: Location {
                             file: self.file_path.clone(),

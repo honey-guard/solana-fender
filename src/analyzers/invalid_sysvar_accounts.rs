@@ -150,8 +150,8 @@ impl<'a, 'ast> Visit<'ast> for SysvarAccountsVisitor<'a> {
         for account in &self.used_accounts {
             if !self.validated_accounts.contains(account) {
                 self.findings.push(Finding {
-                    severity: Severity::High,
-                    certainty: Certainty::High,
+                    severity: Severity::Low,
+                    certainty: Certainty::Low,
                     message: format!("Sysvar account '{}' is used without validation against its proper sysvar::*::ID", account),
                     location: Location {
                         file: self.current_file.clone(),

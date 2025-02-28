@@ -54,8 +54,8 @@ impl<'a, 'ast> Visit<'ast> for AccountDataMatchingVisitor<'a> {
         if !self.token_vars.is_empty() && !self.has_owner_check {
             for (_var_name, (line, column)) in &self.token_vars {
                 self.findings.push(Finding {
-                    severity: Severity::Medium,
-                    certainty: Certainty::Medium,
+                    severity: Severity::Low,
+                    certainty: Certainty::Low,
                     message: format!("Token account unpacked without verifying the owner matches the authority"),
                     location: Location {
                         file: self.file_path.clone(),

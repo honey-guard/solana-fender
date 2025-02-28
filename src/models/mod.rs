@@ -93,10 +93,20 @@ impl Program {
 fn find_rust_files(path: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut rust_files = Vec::new();
     
+    let debug_mode = std::env::var("SOLANA_FENDER_DEBUG").unwrap_or_default() == "true";
+    
     for entry in WalkDir::new(path)
         .follow_links(true)
         .into_iter()
-        .filter_map(|e| e.ok()) {
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            // Skip target directories
+            let is_target = e.path().components().any(|c| c.as_os_str() == "target");
+            if is_target && debug_mode {
+                println!("Skipping target directory: {}", e.path().display());
+            }
+            !is_target
+        }) {
             if entry.path().extension().map_or(false, |ext| ext == "rs") {
                 rust_files.push(entry.path().to_path_buf());
             }

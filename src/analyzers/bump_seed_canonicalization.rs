@@ -75,7 +75,7 @@ impl<'a, 'ast> Visit<'ast> for BumpSeedVisitor<'a> {
                 for (line, column) in &self.create_program_address_calls {
                     self.findings.push(Finding {
                         severity: Severity::Medium,
-                        certainty: Certainty::Medium,
+                        certainty: Certainty::Low,
                         message: "Using create_program_address with a bump parameter without canonical bump validation. Consider using find_program_address to derive the canonical bump.".to_string(),
                         location: Location {
                             file: self.file_path.clone(),
@@ -108,7 +108,7 @@ impl<'a, 'ast> Visit<'ast> for BumpSeedVisitor<'a> {
                             if self.current_function.as_ref().map_or(false, |fn_name| self.functions_with_bump_param.contains(fn_name)) {
                                 self.findings.push(Finding {
                                     severity: Severity::Medium,
-                                    certainty: Certainty::Medium,
+                                    certainty: Certainty::Low,
                                     message: "Using create_program_address with a bump parameter without canonical bump validation. Consider using find_program_address to derive the canonical bump.".to_string(),
                                     location: Location {
                                         file: self.file_path.clone(),

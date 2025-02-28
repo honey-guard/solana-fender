@@ -206,32 +206,104 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
     ];
 
     let mut all_findings = Vec::new();
+    
+    // Check if debug mode is enabled
+    let debug_mode = std::env::var("SOLANA_FENDER_DEBUG")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
 
     // Run all analyzers
     for analyzer in analyzers {
-        println!("\nRunning {}", analyzer.name().bold());
-        println!("{}", analyzer.description());
+        let analyzer_name = analyzer.name();
+        
+        if debug_mode {
+            println!("\nRunning {}", analyzer_name.bold());
+            println!("{}", analyzer.description());
+        }
         
         match analyzer.analyze(program) {
             Ok(findings) => {
                 if findings.is_empty() {
-                    println!("{}", "✓ No issues found".green());
+                    if debug_mode {
+                        println!("{}", "✓ No issues found".green());
+                    } else {
+                        println!("{} {}: {}", "✓".green(), analyzer_name, "No issues found".green());
+                    }
                 } else {
-                    for finding in &findings {
-                        println!("\n{} ({:?}, {:?})", "Issue found:".yellow(), finding.severity, finding.certainty);
-                        println!("  → {}", finding.message);
-                        println!("    at {}:{}:{}", finding.location.file, finding.location.line, finding.location.column);
+                    if debug_mode {
+                        for finding in &findings {
+                            println!("\n{} ({:?}, {:?})", "Issue found:".yellow(), finding.severity, finding.certainty);
+                            println!("  → {}", finding.message);
+                            println!("    at {}:{}:{}", finding.location.file, finding.location.line, finding.location.column);
+                        }
+                    } else {
+                        // For non-debug mode, print a summary of issues found
+                        println!("{} {}: {} issues found", "❌".red(), analyzer_name, findings.len());
+                        for (i, finding) in findings.iter().enumerate() {
+                            let severity_colored = match finding.severity {
+                                Severity::Low => format!("[{}]", finding.severity).yellow(),
+                                Severity::Medium => format!("[{}]", finding.severity).truecolor(255, 165, 0), // Orange
+                                Severity::High => format!("[{}]", finding.severity).red(),
+                                Severity::Critical => format!("[{}]", finding.severity).red().bold(),
+                            };
+                            
+                            println!("  {}. {} {} at {}:{}:{}", 
+                                i+1, 
+                                severity_colored, 
+                                finding.message, 
+                                finding.location.file, 
+                                finding.location.line, 
+                                finding.location.column);
+                        }
                     }
                     // Add findings to the collection
                     all_findings.extend(findings);
                 }
             }
             Err(e) => {
-                println!("{}: {}", "Error running analyzer".red(), e);
-                return Err(anyhow!("Error running analyzer {}: {}", analyzer.name(), e));
+                let error_msg = format!("Error running analyzer {}: {}", analyzer_name, e);
+                if debug_mode {
+                    println!("{}: {}", "Error running analyzer".red(), e);
+                } else {
+                    println!("{} {}: Error - {}", "❌".red(), analyzer_name, e);
+                }
+                return Err(anyhow!(error_msg));
             }
         }
     }
 
     Ok(all_findings)
+}
+
+/// Filter findings based on severity levels to ignore
+/// 
+/// # Arguments
+/// 
+/// * `findings` - Vector of findings to filter
+/// * `ignore_low` - Whether to ignore Low severity findings
+/// * `ignore_medium` - Whether to ignore Medium severity findings
+/// * `ignore_high` - Whether to ignore High severity findings
+/// * `ignore_critical` - Whether to ignore Critical severity findings
+/// 
+/// # Returns
+/// 
+/// A filtered vector of findings
+pub fn filter_findings_by_severity(
+    findings: Vec<Finding>,
+    ignore_low: bool,
+    ignore_medium: bool,
+    ignore_high: bool,
+    ignore_critical: bool,
+) -> Vec<Finding> {
+    findings.into_iter()
+        .filter(|finding| {
+            match finding.severity {
+                Severity::Low => !ignore_low,
+                Severity::Medium => !ignore_medium,
+                Severity::High => !ignore_high,
+                Severity::Critical => !ignore_critical,
+            }
+        })
+        .collect()
 } 
