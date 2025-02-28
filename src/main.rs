@@ -4,7 +4,7 @@ mod models;
 use anyhow::Result;
 use clap::{Parser, ArgAction};
 use std::path::PathBuf;
-use solana_fender::{Severity, analyze_program_dir};
+use solana_fender::{Severity, analyze_program_dir, analyze_program_file};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -14,8 +14,12 @@ use solana_fender::{Severity, analyze_program_dir};
 /// It automatically ignores /target directories during scanning.
 struct Args {
     /// Path to the Solana program directory to analyze
-    #[arg(short, long)]
-    program: PathBuf,
+    #[arg(short, long, group = "target")]
+    program: Option<PathBuf>,
+
+    /// Path to a single Solana program file to analyze
+    #[arg(short, long, group = "target")]
+    file: Option<PathBuf>,
 
     /// Ignore findings with Low severity
     #[arg(long, action = ArgAction::SetTrue)]
@@ -44,8 +48,20 @@ fn main() -> Result<()> {
     // Set the debug mode for the library
     std::env::set_var("SOLANA_FENDER_DEBUG", args.debug.to_string());
     
-    // Use the library function to analyze the program
-    let mut findings = analyze_program_dir(args.program)?;
+    // Ensure either program or file is provided
+    if args.program.is_none() && args.file.is_none() {
+        eprintln!("Error: Either --program or --file must be specified");
+        std::process::exit(1);
+    }
+    
+    // Use the library function to analyze the program or file
+    let mut findings = if let Some(program_path) = args.program {
+        analyze_program_dir(program_path)?
+    } else if let Some(file_path) = args.file {
+        analyze_program_file(file_path)?
+    } else {
+        unreachable!("Either program or file must be provided due to clap group constraint");
+    };
     
     // Filter findings based on severity ignore flags
     findings.retain(|finding| {

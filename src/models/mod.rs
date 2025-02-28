@@ -86,6 +86,37 @@ impl Program {
             root_path: PathBuf::from("."),
         })
     }
+
+    /// Create a Program from a single Rust file
+    pub fn from_file(file_path: PathBuf) -> Result<Self> {
+        let mut asts = HashMap::new();
+        
+        // Read and parse the file
+        let content = std::fs::read_to_string(&file_path)?;
+        println!("Parsing file: {}", file_path.display());
+        
+        match syn::parse_file(&content) {
+            Ok(ast) => {
+                // Get the parent directory as the root path
+                let root_path = file_path.parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| PathBuf::from("."));
+                
+                // Use the file name as the relative path
+                let file_name = file_path.file_name()
+                    .map(|n| PathBuf::from(n))
+                    .unwrap_or_else(|| PathBuf::from("unknown.rs"));
+                
+                asts.insert(file_name, ast);
+                
+                Ok(Program {
+                    asts,
+                    root_path,
+                })
+            },
+            Err(e) => Err(anyhow!("Error parsing {}: {}", file_path.display(), e)),
+        }
+    }
 }
 
 // Helper function to find all Rust files in a directory

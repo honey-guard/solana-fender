@@ -182,6 +182,28 @@ pub fn analyze_program_by_name(module_name: &str) -> Result<Vec<Finding>> {
     run_analyzers(&program)
 }
 
+/// Analyze a single Solana program file
+/// 
+/// Returns a Result containing either:
+/// - Ok(Vec<Finding>) - A vector of security findings (empty if no issues found)
+/// - Err(anyhow::Error) - An error if analysis failed
+pub fn analyze_program_file(file_path: PathBuf) -> Result<Vec<Finding>> {
+    // Check if the file exists
+    if !file_path.exists() {
+        return Err(anyhow!("File not found: {}", file_path.display()));
+    }
+    
+    // Check if it's a Rust file
+    if file_path.extension().map_or(true, |ext| ext != "rs") {
+        return Err(anyhow!("Not a Rust file: {}", file_path.display()));
+    }
+    
+    // Create program from single file
+    let program = Program::from_file(file_path)?;
+    
+    run_analyzers(&program)
+}
+
 /// Run all analyzers on a program
 /// 
 /// Returns a Result containing either:
