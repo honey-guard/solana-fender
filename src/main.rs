@@ -5,6 +5,7 @@ use anyhow::Result;
 use clap::{Parser, ArgAction};
 use std::path::PathBuf;
 use solana_fender::{Severity, analyze_program_dir, analyze_program_file};
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -40,6 +41,14 @@ struct Args {
     /// Show detailed debug output
     #[arg(long, action = ArgAction::SetTrue)]
     debug: bool,
+
+    /// Output results in markdown format
+    #[arg(long, action = ArgAction::SetTrue)]
+    markdown: bool,
+
+    /// Path to save markdown output (if not specified, prints to stdout)
+    #[arg(long)]
+    output: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
@@ -55,10 +64,10 @@ fn main() -> Result<()> {
     }
     
     // Use the library function to analyze the program or file
-    let mut findings = if let Some(program_path) = args.program {
-        analyze_program_dir(program_path)?
-    } else if let Some(file_path) = args.file {
-        analyze_program_file(file_path)?
+    let mut findings = if let Some(program_path) = args.program.as_ref() {
+        analyze_program_dir(program_path.clone())?
+    } else if let Some(file_path) = args.file.as_ref() {
+        analyze_program_file(file_path.clone())?
     } else {
         unreachable!("Either program or file must be provided due to clap group constraint");
     };
@@ -72,6 +81,51 @@ fn main() -> Result<()> {
             Severity::Critical => !args.ignore_critical,
         }
     });
+
+    // Handle markdown output if requested
+    if args.markdown {
+        // Get the program name from the path
+        let program_name = if let Some(program_path) = args.program.as_ref() {
+            program_path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("solana_program")
+        } else if let Some(file_path) = args.file.as_ref() {
+            file_path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("solana_file")
+        } else {
+            "solana_program"
+        };
+
+        // Convert findings to the format expected by create_analysis_report
+        let mut findings_map: HashMap<PathBuf, Vec<models::markdown::Finding>> = HashMap::new();
+        
+        for finding in &findings {
+            let file_path = PathBuf::from(&finding.location.file);
+            let markdown_finding = models::markdown::Finding::new(
+                &format!("{:?} Severity Issue", finding.severity),
+                &format!("{:?}", finding.severity),
+                finding.location.line,
+                &finding.message,
+            );
+            
+            findings_map.entry(file_path)
+                .or_insert_with(Vec::new)
+                .push(markdown_finding);
+        }
+        
+        // Generate markdown report
+        let markdown_output = models::markdown::create_analysis_report(
+            program_name,
+            findings_map,
+            args.output.as_deref(),
+        )?;
+        
+        // If no output file is specified, print to stdout
+        if args.output.is_none() {
+            println!("{}", markdown_output);
+        }
+    }
     
     // Return success if no findings, otherwise exit with error code
     if findings.is_empty() {

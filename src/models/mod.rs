@@ -6,6 +6,9 @@ use walkdir::WalkDir;
 use quote::quote;
 use anyhow::anyhow;
 
+// Export the markdown module
+pub mod markdown;
+
 #[derive(Debug)]
 pub struct Program {
     pub asts: HashMap<PathBuf, File>,
