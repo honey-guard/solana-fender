@@ -264,14 +264,4 @@ impl Finding {
             recommendation: None,
         }
     }
-    
-    pub fn with_code_snippet(mut self, code: &str) -> Self {
-        self.code_snippet = Some(code.to_string());
-        self
-    }
-    
-    pub fn with_recommendation(mut self, recommendation: &str) -> Self {
-        self.recommendation = Some(recommendation.to_string());
-        self
-    }
 } 

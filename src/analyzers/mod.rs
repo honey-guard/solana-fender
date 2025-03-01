@@ -24,7 +24,7 @@ pub trait Analyzer {
     fn description(&self) -> &'static str;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Finding {
     pub severity: Severity,
@@ -33,7 +33,7 @@ pub struct Finding {
     pub location: Location,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum Severity {
     Critical,
@@ -54,14 +54,14 @@ impl fmt::Display for Severity {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Certainty {
     High,
     Medium,
     Low,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Location {
     pub file: String,

@@ -4,6 +4,7 @@ pub mod models;
 use anyhow::{Result, anyhow};
 use colored::*;
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 use crate::analyzers::Analyzer;
 use crate::analyzers::missing_owner::MissingOwnerCheck;
@@ -23,6 +24,7 @@ use crate::models::Program;
 
 // Re-export types that users of the crate will need
 pub use crate::analyzers::{Finding, Severity, Certainty, Location};
+pub use crate::models::markdown;
 
 /// Analyze a Solana program directory
 /// 
@@ -328,4 +330,129 @@ pub fn filter_findings_by_severity(
             }
         })
         .collect()
+}
+
+/// Convert findings to markdown format
+/// 
+/// This function takes a vector of findings and converts them to a markdown report.
+/// 
+/// # Arguments
+/// 
+/// * `findings` - Vector of findings to convert to markdown
+/// * `program_name` - Name of the program being analyzed
+/// * `output_path` - Optional path to save the markdown report to
+/// 
+/// # Returns
+/// 
+/// A Result containing either:
+/// - Ok(String) - The markdown report as a string
+/// - Err(anyhow::Error) - An error if conversion failed
+/// 
+/// # Example
+/// 
+/// ```
+/// use solana_fender::{analyze_program_dir, findings_to_markdown};
+/// use std::path::PathBuf;
+/// 
+/// fn main() -> anyhow::Result<()> {
+///     let program_path = PathBuf::from("path/to/program");
+///     let findings = analyze_program_dir(program_path.clone())?;
+///     
+///     // Convert findings to markdown
+///     let program_name = program_path.file_name()
+///         .and_then(|name| name.to_str())
+///         .unwrap_or("solana_program");
+///     
+///     let markdown = findings_to_markdown(findings, program_name, None)?;
+///     println!("{}", markdown);
+///     
+///     Ok(())
+/// }
+/// ```
+pub fn findings_to_markdown(
+    findings: Vec<Finding>,
+    program_name: &str,
+    output_path: Option<&std::path::Path>,
+) -> Result<String> {
+    // Convert findings to the format expected by create_analysis_report
+    let mut findings_map: HashMap<PathBuf, Vec<models::markdown::Finding>> = HashMap::new();
+    
+    for finding in findings {
+        let file_path = PathBuf::from(&finding.location.file);
+        let mut markdown_finding = models::markdown::Finding::new(
+            &format!("{:?} Severity Issue", finding.severity),
+            &format!("{}", finding.severity),
+            finding.location.line,
+            &finding.message,
+        );
+        
+        // Add code snippet if available
+        if let Ok(file_content) = std::fs::read_to_string(&file_path) {
+            let lines: Vec<&str> = file_content.lines().collect();
+            
+            // Get a few lines around the issue
+            let start_line = finding.location.line.saturating_sub(2);
+            let end_line = std::cmp::min(finding.location.line + 2, lines.len());
+            
+            if start_line < end_line && start_line < lines.len() {
+                let snippet = lines[start_line..end_line].join("\n");
+                markdown_finding.code_snippet = Some(snippet);
+            }
+        }
+        
+        // Add recommendation based on severity and finding type
+        let recommendation = match finding.severity {
+            Severity::Critical => format!("This is a critical issue that must be fixed immediately. {}", get_recommendation_for_finding(&finding)),
+            Severity::High => format!("This is a high severity issue that should be addressed promptly. {}", get_recommendation_for_finding(&finding)),
+            Severity::Medium => format!("This is a medium severity issue that should be reviewed. {}", get_recommendation_for_finding(&finding)),
+            Severity::Low => format!("This is a low severity issue. {}", get_recommendation_for_finding(&finding)),
+        };
+        
+        markdown_finding.recommendation = Some(recommendation);
+        
+        findings_map.entry(file_path)
+            .or_insert_with(Vec::new)
+            .push(markdown_finding);
+    }
+    
+    // Generate markdown report
+    models::markdown::create_analysis_report(
+        program_name,
+        findings_map,
+        output_path,
+    )
+}
+
+/// Helper function to get a recommendation based on the finding type
+fn get_recommendation_for_finding(finding: &Finding) -> String {
+    // Extract the analyzer name from the message or location
+    if finding.message.contains("owner check") {
+        "Implement proper owner checks to ensure account ownership is validated before use."
+    } else if finding.message.contains("data matching") || finding.message.contains("account data") {
+        "Ensure account data is properly validated and matches expected types."
+    } else if finding.message.contains("initialization") {
+        "Verify that accounts are properly initialized before use."
+    } else if finding.message.contains("CPI") {
+        "Review Cross-Program Invocation (CPI) calls to ensure they are secure and authorized."
+    } else if finding.message.contains("closing") {
+        "Ensure accounts are properly closed and funds are transferred to the correct destination."
+    } else if finding.message.contains("duplicate") || finding.message.contains("mutable") {
+        "Check for duplicate mutable accounts to prevent unintended data modification."
+    } else if finding.message.contains("bump seed") || finding.message.contains("canonicalization") {
+        "Use canonical bump seeds for PDA derivation to ensure consistent account addressing."
+    } else if finding.message.contains("PDA sharing") {
+        "Avoid sharing PDAs between different logical entities."
+    } else if finding.message.contains("type cosplay") {
+        "Ensure account types are properly validated to prevent type confusion attacks."
+    } else if finding.message.contains("reentrancy") {
+        "Implement reentrancy guards to prevent reentrancy attacks."
+    } else if finding.message.contains("unauthorized") || finding.message.contains("access") {
+        "Implement proper access controls to prevent unauthorized access."
+    } else if finding.message.contains("integer") || finding.message.contains("overflow") {
+        "Use checked arithmetic operations to prevent integer overflow/underflow."
+    } else if finding.message.contains("sysvar") {
+        "Validate sysvar accounts against their proper sysvar::*::ID."
+    } else {
+        "Review the code carefully and implement appropriate security measures."
+    }.to_string()
 } 

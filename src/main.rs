@@ -4,7 +4,7 @@ mod models;
 use anyhow::Result;
 use clap::{Parser, ArgAction};
 use std::path::PathBuf;
-use solana_fender::{Severity, analyze_program_dir, analyze_program_file};
+use solana_fender::{Severity, analyze_program_dir, analyze_program_file, findings_to_markdown};
 use std::collections::HashMap;
 
 #[derive(Parser)]
@@ -97,27 +97,10 @@ fn main() -> Result<()> {
             "solana_program"
         };
 
-        // Convert findings to the format expected by create_analysis_report
-        let mut findings_map: HashMap<PathBuf, Vec<models::markdown::Finding>> = HashMap::new();
-        
-        for finding in &findings {
-            let file_path = PathBuf::from(&finding.location.file);
-            let markdown_finding = models::markdown::Finding::new(
-                &format!("{:?} Severity Issue", finding.severity),
-                &format!("{:?}", finding.severity),
-                finding.location.line,
-                &finding.message,
-            );
-            
-            findings_map.entry(file_path)
-                .or_insert_with(Vec::new)
-                .push(markdown_finding);
-        }
-        
-        // Generate markdown report
-        let markdown_output = models::markdown::create_analysis_report(
+        // Use the library function to convert findings to markdown
+        let markdown_output = findings_to_markdown(
+            findings.clone(),
             program_name,
-            findings_map,
             args.output.as_deref(),
         )?;
         
