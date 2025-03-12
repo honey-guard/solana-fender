@@ -162,6 +162,12 @@ pub fn create_analysis_report(
     findings: HashMap<PathBuf, Vec<Finding>>,
     output_path: Option<&Path>,
 ) -> Result<String> {
+    // Check if output should be suppressed
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    
     let mut doc = MarkdownDocument::new(&format!("Solana Fender Analysis: {}", program_name));
     
     // Add summary section
@@ -232,7 +238,19 @@ pub fn create_analysis_report(
     
     // Save to file if output path is provided
     if let Some(path) = output_path {
-        doc.save_to_file(path)?;
+        match doc.save_to_file(path) {
+            Ok(_) => {
+                if !suppress_output {
+                    println!("Markdown report saved to {}", path.display());
+                }
+            },
+            Err(e) => {
+                if !suppress_output {
+                    eprintln!("Error saving markdown report: {}", e);
+                }
+                return Err(e);
+            }
+        }
     }
     
     Ok(doc.to_string())
@@ -264,4 +282,5 @@ impl Finding {
             recommendation: None,
         }
     }
+
 } 

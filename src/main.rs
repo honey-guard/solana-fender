@@ -57,6 +57,9 @@ fn main() -> Result<()> {
     // Set the debug mode for the library
     std::env::set_var("SOLANA_FENDER_DEBUG", args.debug.to_string());
     
+    // Set a new environment variable to control output suppression when using markdown
+    std::env::set_var("SOLANA_FENDER_SUPPRESS_OUTPUT", args.markdown.to_string());
+    
     // Ensure either program or file is provided
     if args.program.is_none() && args.file.is_none() {
         eprintln!("Error: Either --program or --file must be specified");
@@ -114,7 +117,10 @@ fn main() -> Result<()> {
     if findings.is_empty() {
         Ok(())
     } else {
-        // We've already printed the findings in the analyze function
+        // Only print a summary message if not in markdown mode
+        if !args.markdown {
+            println!("\nFound {} security issues in the program", findings.len());
+        }
         std::process::exit(1);
     }
 }

@@ -23,10 +23,18 @@ impl Program {
         // Find all Rust files in the directory
         let rust_files = find_rust_files(&path)?;
         
+        // Check if output should be suppressed
+        let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .unwrap_or(false);
+        
         // Parse each file
         for file_path in rust_files {
             let content = std::fs::read_to_string(&file_path)?;
-            println!("Parsing file: {}", file_path.display());
+            if !suppress_output {
+                println!("Parsing file: {}", file_path.display());
+            }
             //println!("File content: \n{}", content);
             
             match syn::parse_file(&content) {
@@ -37,7 +45,9 @@ impl Program {
                     asts.insert(rel_path, ast);
                 }
                 Err(e) => {
-                    eprintln!("Error parsing {}: {}", file_path.display(), e);
+                    if !suppress_output {
+                        eprintln!("Error parsing {}: {}", file_path.display(), e);
+                    }
                 }
             }
         }
@@ -94,9 +104,17 @@ impl Program {
     pub fn from_file(file_path: PathBuf) -> Result<Self> {
         let mut asts = HashMap::new();
         
+        // Check if output should be suppressed
+        let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .unwrap_or(false);
+        
         // Read and parse the file
         let content = std::fs::read_to_string(&file_path)?;
-        println!("Parsing file: {}", file_path.display());
+        if !suppress_output {
+            println!("Parsing file: {}", file_path.display());
+        }
         
         match syn::parse_file(&content) {
             Ok(ast) => {
@@ -128,6 +146,10 @@ fn find_rust_files(path: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut rust_files = Vec::new();
     
     let debug_mode = std::env::var("SOLANA_FENDER_DEBUG").unwrap_or_default() == "true";
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
     
     for entry in WalkDir::new(path)
         .follow_links(true)
@@ -136,7 +158,7 @@ fn find_rust_files(path: &PathBuf) -> Result<Vec<PathBuf>> {
         .filter(|e| {
             // Skip target directories
             let is_target = e.path().components().any(|c| c.as_os_str() == "target");
-            if is_target && debug_mode {
+            if is_target && debug_mode && !suppress_output {
                 println!("Skipping target directory: {}", e.path().display());
             }
             !is_target

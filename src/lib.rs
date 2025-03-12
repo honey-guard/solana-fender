@@ -72,7 +72,16 @@ pub fn analyze_program_dir(program_path: PathBuf) -> Result<Vec<Finding>> {
 pub fn analyze_program<T>(_program_module: T) -> Result<Vec<Finding>> {
     // Extract the module name from the type name
     let module_name = std::any::type_name::<T>();
-    println!("Analyzing module: {}", module_name);
+    
+    // Check if output should be suppressed
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    
+    if !suppress_output {
+        println!("Analyzing module: {}", module_name);
+    }
     
     // Create a synthetic Program with a single file
     let mut asts = std::collections::HashMap::new();
@@ -138,7 +147,15 @@ pub fn analyze_program<T>(_program_module: T) -> Result<Vec<Finding>> {
 /// }
 /// ```
 pub fn analyze_program_by_name(module_name: &str) -> Result<Vec<Finding>> {
-    println!("Analyzing module by name: {}", module_name);
+    // Check if output should be suppressed
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    
+    if !suppress_output {
+        println!("Analyzing module by name: {}", module_name);
+    }
     
     // Create a synthetic Program with a single file
     let mut asts = std::collections::HashMap::new();
@@ -236,12 +253,18 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         .unwrap_or_else(|_| "false".to_string())
         .parse::<bool>()
         .unwrap_or(false);
+        
+    // Check if output should be suppressed (for markdown mode)
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
 
     // Run all analyzers
     for analyzer in analyzers {
         let analyzer_name = analyzer.name();
         
-        if debug_mode {
+        if debug_mode && !suppress_output {
             println!("\nRunning {}", analyzer_name.bold());
             println!("{}", analyzer.description());
         }
@@ -249,19 +272,19 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         match analyzer.analyze(program) {
             Ok(findings) => {
                 if findings.is_empty() {
-                    if debug_mode {
+                    if debug_mode && !suppress_output {
                         println!("{}", "✓ No issues found".green());
-                    } else {
+                    } else if !suppress_output {
                         println!("{} {}: {}", "✓".green(), analyzer_name, "No issues found".green());
                     }
                 } else {
-                    if debug_mode {
+                    if debug_mode && !suppress_output {
                         for finding in &findings {
                             println!("\n{} ({:?}, {:?})", "Issue found:".yellow(), finding.severity, finding.certainty);
                             println!("  → {}", finding.message);
                             println!("    at {}:{}:{}", finding.location.file, finding.location.line, finding.location.column);
                         }
-                    } else {
+                    } else if !suppress_output {
                         // For non-debug mode, print a summary of issues found
                         println!("{} {}: {} issues found", "❌".red(), analyzer_name, findings.len());
                         for (i, finding) in findings.iter().enumerate() {
@@ -287,9 +310,9 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
             }
             Err(e) => {
                 let error_msg = format!("Error running analyzer {}: {}", analyzer_name, e);
-                if debug_mode {
+                if debug_mode && !suppress_output {
                     println!("{}: {}", "Error running analyzer".red(), e);
-                } else {
+                } else if !suppress_output {
                     println!("{} {}: Error - {}", "❌".red(), analyzer_name, e);
                 }
                 return Err(anyhow!(error_msg));
@@ -374,6 +397,12 @@ pub fn findings_to_markdown(
     program_name: &str,
     output_path: Option<&std::path::Path>,
 ) -> Result<String> {
+    // Check if output should be suppressed
+    let suppress_output = std::env::var("SOLANA_FENDER_SUPPRESS_OUTPUT")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false);
+    
     // Convert findings to the format expected by create_analysis_report
     let mut findings_map: HashMap<PathBuf, Vec<models::markdown::Finding>> = HashMap::new();
     
@@ -398,6 +427,9 @@ pub fn findings_to_markdown(
                 let snippet = lines[start_line..end_line].join("\n");
                 markdown_finding.code_snippet = Some(snippet);
             }
+        } else if !suppress_output {
+            // Only print error if output is not suppressed
+            eprintln!("Warning: Could not read file {} for code snippet", file_path.display());
         }
         
         // Add recommendation based on severity and finding type

@@ -1,6 +1,6 @@
 [package]
 name = "solana_fender"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 description = "Static analysis tool for Solana smart contracts"
 authors = ["Cian githhub.com/cianyyz"]
