@@ -11,6 +11,7 @@ pub mod duplicate_mutable_accounts;
 pub mod arbitrary_cpi;
 pub mod account_initialization;
 pub mod account_data_matching;
+pub mod improper_instruction_introspection;
 
 // Common traits and types for analyzers
 use crate::models::*;
