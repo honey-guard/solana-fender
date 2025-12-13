@@ -89,23 +89,27 @@ mod tests {
         let code = r#"
             use solana_program::sysvar::instructions::load_instruction_at_checked;
 
+            // Case 1: Unsafe usage with absolute index
             fn unsafe_function(ctx: Context<Mint>) -> Result<()> {
+                // This uses an absolute index '0', which is dangerous
                 let ix = load_instruction_at_checked(0, ctx.accounts.instructions)?;
                 Ok(())
             }
 
-            fn safe_function_conceptually(ctx: Context<Mint>) -> Result<()> {
-                // This will still be flagged if it's a literal, because the analyzer
-                // flags *any* literal usage, as they imply absolute indexing which is dangerous.
-                // However, let's verify it flags both 0 and 1.
-                let ix = load_instruction_at_checked(1, ctx.accounts.instructions)?;
-                Ok(())
-            }
-
-            fn safe_relative() -> Result<()> {
-                 // Analyzer should not flag this as it is not load_instruction_at_checked
+            // Case 2: Properly done case - Using relative index
+            fn safe_relative(ctx: Context<Mint>) -> Result<()> {
+                 // This uses relative indexing, which preserves correlation
+                 // The analyzer should NOT flag this
                  let ix = get_instruction_relative(-1, ctx.accounts.instructions)?;
                  Ok(())
+            }
+
+            // Case 3: Properly done case - Variable index (assumed validated)
+            fn safe_variable_index(ctx: Context<Mint>, index: usize) -> Result<()> {
+                // This uses a variable index, not a hardcoded literal
+                // The analyzer should NOT flag this as it only targets literals
+                let ix = load_instruction_at_checked(index, ctx.accounts.instructions)?;
+                Ok(())
             }
         "#;
 
@@ -121,8 +125,13 @@ mod tests {
         let analyzer = ImproperInstructionIntrospection;
         let findings = analyzer.analyze(&program).unwrap();
 
-        assert_eq!(findings.len(), 2);
-        assert!(findings[0].message.contains("Using absolute index '0'"));
-        assert!(findings[1].message.contains("Using absolute index '1'"));
+        // Verify we only have 1 finding (from Case 1)
+        assert_eq!(findings.len(), 1, "Expected exactly 1 finding, found {}", findings.len());
+
+        // Verify the finding corresponds to the unsafe usage
+        let finding = &findings[0];
+        assert!(finding.message.contains("Using absolute index '0'"));
+
+        // Verify no findings for the safe cases implicitly by the count check
     }
 }
