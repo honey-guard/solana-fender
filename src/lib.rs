@@ -158,48 +158,52 @@ pub fn analyze_program_by_name(module_name: &str) -> Result<Vec<Finding>> {
         println!("Analyzing module by name: {}", module_name);
     }
     
-    // Create a synthetic Program with a single file
-    let mut asts = std::collections::HashMap::new();
+    // Locate the actual module file
+    let file_path = locate_module_file(module_name)
+        .ok_or_else(|| anyhow!("Could not locate source file for module: {}", module_name))?;
     
-    // Create a synthetic file path for the module
-    let file_path = PathBuf::from(format!("{}.rs", module_name));
+    if !suppress_output {
+        println!("Found module source at: {}", file_path.display());
+    }
+
+    analyze_program_file(file_path)
+}
+
+// Helper function to locate the source file for a module
+fn locate_module_file(module_name: &str) -> Option<PathBuf> {
+    let path_parts: Vec<&str> = module_name.split("::").collect();
+    let relative_path = path_parts.join(std::path::MAIN_SEPARATOR.to_string().as_str());
     
-    // TODO: In a production implementation, we would:
-    // 1. Try to locate the actual module in the crate
-    // 2. Parse the actual source file
-    // 3. Extract the real AST for analysis
-    // For now, we create a synthetic AST as a placeholder
+    // Possible search paths
+    let search_paths = vec![
+        // Direct path
+        PathBuf::from(format!("{}.rs", relative_path)),
+        PathBuf::from(format!("{}/mod.rs", relative_path)),
+        // Inside src/
+        PathBuf::from(format!("src/{}.rs", relative_path)),
+        PathBuf::from(format!("src/{}/mod.rs", relative_path)),
+    ];
     
-    // Create a synthetic AST for the module
-    let file_content = format!(r#"
-        use anchor_lang::prelude::*;
-        
-        #[program]
-        pub mod {} {{
-            use super::*;
-            
-            pub fn initialize(ctx: Context<Initialize>) -> Result<()> {{
-                Ok(())
-            }}
-        }}
-        
-        #[derive(Accounts)]
-        pub struct Initialize {{}}
-    "#, module_name);
+    for path in search_paths {
+        if path.exists() {
+            return Some(path);
+        }
+    }
     
-    let file = syn::parse_file(&file_content)
-        .map_err(|e| anyhow!("Failed to parse synthetic module: {}", e))?;
-    
-    asts.insert(file_path, file);
-    
-    // Create a synthetic Program
-    let program = Program {
-        asts,
-        root_path: PathBuf::from("."),
-    };
-    
-    // Run the analyzers
-    run_analyzers(&program)
+    // Heuristic: Check src/lib.rs for inline module definition
+    // This handles the case where module_name is defined inside lib.rs (e.g. #[program] mod my_program)
+    let lib_path = PathBuf::from("src/lib.rs");
+    if lib_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&lib_path) {
+             let simple_name = path_parts.last().unwrap_or(&"");
+             // Check for "mod name" or "mod name {" or "mod name;"
+             if content.contains(&format!("mod {}", simple_name)) {
+                 return Some(lib_path);
+             }
+        }
+    }
+
+    None
 }
 
 /// Analyze a single Solana program file
