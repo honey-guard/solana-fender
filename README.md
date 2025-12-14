@@ -50,7 +50,7 @@ Add Solana Fender to your program's `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-solana_fender = "0.4.3"  # Replace with the latest version
+solana_fender = "0.5.0"  # Replace with the latest version
 ```
 
 ### Example Usage in Tests
