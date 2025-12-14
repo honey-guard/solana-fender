@@ -165,10 +165,7 @@ impl<'a, 'ast> Visit<'ast> for ArbitraryCpiVisitor<'a> {
             Expr::MethodCall(method_call) => {
                 let method_name = method_call.method.to_string();
                 // Check for Anchor's Program type or other validation methods
-                if method_name == "to_account_info" || 
-                   method_name == "key" || 
-                   method_name == "validate_program" ||
-                   method_name == "to_account_metas" {
+                if method_name == "validate_program" {
                     self.has_program_id_check = true;
                 }
             },
@@ -188,4 +185,79 @@ impl<'a, 'ast> Visit<'ast> for ArbitraryCpiVisitor<'a> {
         // Continue visiting the expression
         syn::visit::visit_expr(&mut *self, expr);
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_arbitrary_cpi_vulnerable() {
+        let code = r#"
+        pub fn cpi_without_check(ctx: Context<Initialize>) -> Result<()> {
+            let instruction = Instruction::new_with_bytes(
+                ctx.accounts.program_account.key(),
+                &[],
+                vec![],
+            );
+            solana_program::program::invoke(&instruction, &[ctx.accounts.program_account.to_account_info()])?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ArbitraryCpi;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("Potential arbitrary CPI detected without program ID validation"));
+    }
+
+    #[test]
+    fn test_arbitrary_cpi_secure() {
+        let code = r#"
+        pub fn cpi_with_check(ctx: Context<Initialize>) -> Result<()> {
+             if ctx.accounts.program_account.key() != &expected_program_id {
+                 return Err(error!(ErrorCode::InvalidProgramId));
+             }
+            let instruction = Instruction::new_with_bytes(
+                ctx.accounts.program_account.key(),
+                &[],
+                vec![],
+            );
+            solana_program::program::invoke(&instruction, &[ctx.accounts.program_account.to_account_info()])?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ArbitraryCpi;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+
+    #[test]
+    fn test_arbitrary_cpi_secure_anchor() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct Cpi<'info> {
+            pub token_program: Program<'info, Token>,
+        }
+        pub fn cpi_anchor(ctx: Context<Cpi>) -> Result<()> {
+            token::transfer(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info(),
+                    token::Transfer {
+                        from: ctx.accounts.from.to_account_info(),
+                        to: ctx.accounts.to.to_account_info(),
+                        authority: ctx.accounts.authority.to_account_info(),
+                    },
+                ),
+                amount,
+            )?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ArbitraryCpi;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

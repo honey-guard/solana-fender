@@ -290,4 +290,77 @@ impl DuplicateMutableAccountsVisitor {
             cell.borrow().clone()
         })
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_duplicate_mutable_accounts_vulnerable() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct DuplicateMutableAccounts<'info> {
+            #[account(mut)]
+            pub account1: Account<'info, MyAccount>,
+            #[account(mut)]
+            pub account2: Account<'info, MyAccount>,
+        }
+
+        pub fn update(ctx: Context<DuplicateMutableAccounts>) -> Result<()> {
+            // No check for duplicate accounts
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = DuplicateMutableAccounts;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("Struct 'DuplicateMutableAccounts' has multiple Account fields without constraints"));
+    }
+
+    #[test]
+    fn test_duplicate_mutable_accounts_secure_constraint() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct SecureAccountsConstraint<'info> {
+            #[account(mut, constraint = account1.key() != account2.key())]
+            pub account1: Account<'info, MyAccount>,
+            #[account(mut)]
+            pub account2: Account<'info, MyAccount>,
+        }
+
+        pub fn update(ctx: Context<SecureAccountsConstraint>) -> Result<()> {
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = DuplicateMutableAccounts;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+
+    #[test]
+    fn test_duplicate_mutable_accounts_secure_manual() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct SecureAccountsManual<'info> {
+            #[account(mut)]
+            pub account1: Account<'info, MyAccount>,
+            #[account(mut)]
+            pub account2: Account<'info, MyAccount>,
+        }
+
+        pub fn update(ctx: Context<SecureAccountsManual>) -> Result<()> {
+            if ctx.accounts.account1.key() == ctx.accounts.account2.key() {
+                return Err(ErrorCode::DuplicateAccounts.into());
+            }
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = DuplicateMutableAccounts;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

@@ -12,6 +12,9 @@ pub mod arbitrary_cpi;
 pub mod account_initialization;
 pub mod account_data_matching;
 
+#[cfg(test)]
+pub mod test_utils;
+
 // Common traits and types for analyzers
 use crate::models::*;
 use anyhow::Result;

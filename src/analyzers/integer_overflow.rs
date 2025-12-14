@@ -117,4 +117,49 @@ impl Analyzer for IntegerOverflowAnalyzer {
 
         Ok(findings)
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_integer_overflow_vulnerable() {
+        let code = r#"
+        pub fn transfer(ctx: Context<Transfer>, amount: u64) -> Result<()> {
+            let from = &mut ctx.accounts.from;
+            let to = &mut ctx.accounts.to;
+            from.amount = from.amount - amount;
+            to.amount = to.amount + amount;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = IntegerOverflowAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert!(findings.len() >= 2);
+        assert!(findings[0].message.contains("Unchecked arithmetic operation found"));
+    }
+
+    #[test]
+    fn test_integer_overflow_secure() {
+        // NOTE: The analyzer currently flags all arithmetic ops as unchecked unless wrapped in checked_*.
+        // But normal Rust code `a = a + b` is valid if we assume overflow checks in debug, but vulnerable in release if overflow-checks=false.
+        // Solana programs usually trap on overflow unless explicitly wrapping.
+        // However, this analyzer seems to want explicit checked math.
+
+        let code = r#"
+        pub fn transfer(ctx: Context<Transfer>, amount: u64) -> Result<()> {
+            let from = &mut ctx.accounts.from;
+            let to = &mut ctx.accounts.to;
+            from.amount = from.amount.checked_sub(amount).unwrap();
+            to.amount = to.amount.checked_add(amount).unwrap();
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = IntegerOverflowAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

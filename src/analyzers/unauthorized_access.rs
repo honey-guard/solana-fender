@@ -308,4 +308,105 @@ impl Analyzer for UnauthorizedAccessAnalyzer {
         findings.extend(visitor.findings);
         Ok(findings)
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_unauthorized_access_vulnerable() {
+        // Vulnerable: authority field is AccountInfo, not Signer
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct Vulnerable<'info> {
+            pub authority: AccountInfo<'info>,
+        }
+
+        #[instruction]
+        pub fn update(ctx: Context<Vulnerable>) -> Result<()> {
+            // No runtime check for is_signer
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = UnauthorizedAccessAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        // The analyzer has 2 findings potential:
+        // 1. Instruction without check.
+        // 2. Struct with authority field not being Signer.
+        // The code logic checks:
+        // `if !has_check && !has_signer_type_field` -> Report instruction issue.
+        // `if has_authority_field && !authority_field_uses_signer` -> Report struct issue.
+
+        // In this case:
+        // `authority` is AccountInfo (not Signer).
+        // `update` has no `is_signer` check.
+
+        // So we expect findings.
+        assert!(findings.len() >= 1);
+        assert!(findings[0].message.contains("does not validate the caller's authority") ||
+                findings[0].message.contains("authority field that doesn't use the Signer type"));
+    }
+
+    #[test]
+    fn test_unauthorized_access_secure_signer_type() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct SecureType<'info> {
+            pub authority: Signer<'info>,
+        }
+
+        #[instruction]
+        pub fn update(ctx: Context<SecureType>) -> Result<()> {
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = UnauthorizedAccessAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+
+    #[test]
+    fn test_unauthorized_access_secure_runtime_check() {
+        let code = r#"
+        #[derive(Accounts)]
+        pub struct SecureCheck<'info> {
+            pub authority: AccountInfo<'info>,
+        }
+
+        #[instruction]
+        pub fn update(ctx: Context<SecureCheck>) -> Result<()> {
+            if !ctx.accounts.authority.is_signer {
+                return Err(ErrorCode::Unauthorized.into());
+            }
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = UnauthorizedAccessAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        // `visit_item_struct` logic:
+        // "Skip if this struct is used in a function with runtime checks"
+        // `structs_with_runtime_checks` is populated in `visit_item_fn`.
+        // The analyzer does 2 passes.
+        // Pass 1: visit file. Populates `structs_with_runtime_checks` (if instruction has check).
+        // Then it clears findings.
+        // Pass 2: visit file. Checks struct.
+
+        // In pass 1:
+        // `visit_item_fn` (`update`). Has check. `struct_name` = "SecureCheck".
+        // `structs_with_runtime_checks` -> insert "SecureCheck".
+
+        // In pass 2:
+        // `visit_item_struct` (`SecureCheck`).
+        // Checks `structs_with_runtime_checks.get("SecureCheck")`. Found. Returns.
+        // `visit_item_fn` (`update`).
+        // `has_check` is true.
+        // `has_signer_type_field` is false (from map).
+        // `if !has_check && !has_signer_type_field`. False. No finding.
+
+        assert_eq!(findings.len(), 0);
+    }
+}

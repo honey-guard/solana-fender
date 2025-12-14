@@ -351,4 +351,44 @@ fn has_anchor_account_attribute(func: &ItemFn) -> bool {
         attr.path().is_ident("account") || 
         (attr.path().is_ident("derive") && attr.to_token_stream().to_string().contains("Accounts"))
     })
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_account_initialization_vulnerable() {
+        let code = r#"
+        pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+            let account = &mut ctx.accounts.my_account;
+            account.data = 10;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = AccountInitialization;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("Function 'initialize' may be vulnerable to account reinitialization"));
+    }
+
+    #[test]
+    fn test_account_initialization_secure() {
+        let code = r#"
+        pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+            let account = &mut ctx.accounts.my_account;
+            if account.is_initialized {
+                 return Err(ProgramError::AccountAlreadyInitialized.into());
+            }
+            account.data = 10;
+            account.is_initialized = true;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = AccountInitialization;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}
