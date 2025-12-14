@@ -200,3 +200,45 @@ impl<'a, 'ast> Visit<'ast> for OwnerCheckVisitor<'a> {
         syn::visit::visit_expr_binary(self, expr);
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_missing_owner_check_vulnerable() {
+        let code = r#"
+        use spl_token::state::Account as SplTokenAccount;
+
+        pub fn update(ctx: Context<Update>) -> Result<()> {
+            // Unpack without checking owner is SPL Token Program
+            let token = SplTokenAccount::unpack(&ctx.accounts.token.data.borrow())?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = MissingOwnerCheck;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("SPL Token account data accessed without program owner check"));
+    }
+
+    #[test]
+    fn test_missing_owner_check_secure() {
+        let code = r#"
+        use spl_token::state::Account as SplTokenAccount;
+
+        pub fn update(ctx: Context<Update>) -> Result<()> {
+            if ctx.accounts.token.owner != &spl_token::ID {
+                return Err(ProgramError::IncorrectProgramId.into());
+            }
+            let token = SplTokenAccount::unpack(&ctx.accounts.token.data.borrow())?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = MissingOwnerCheck;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

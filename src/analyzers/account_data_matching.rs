@@ -212,3 +212,41 @@ fn contains_token_owner(expr: &Expr) -> bool {
         _ => false,
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_account_data_matching_vulnerable() {
+        let code = r#"
+        pub fn unpack_without_check(ctx: Context<Initialize>) -> Result<()> {
+            let token = SplTokenAccount::unpack(&ctx.accounts.token_account.data.borrow())?;
+            // No owner check
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = AccountDataMatching;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("Token account unpacked without verifying the owner matches the authority"));
+    }
+
+    #[test]
+    fn test_account_data_matching_secure() {
+        let code = r#"
+        pub fn unpack_with_check(ctx: Context<Initialize>) -> Result<()> {
+            let token = SplTokenAccount::unpack(&ctx.accounts.token_account.data.borrow())?;
+            if ctx.accounts.authority.key != &token.owner {
+                return Err(error!(ErrorCode::Unauthorized));
+            }
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = AccountDataMatching;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

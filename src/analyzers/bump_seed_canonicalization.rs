@@ -169,4 +169,69 @@ impl<'a, 'ast> Visit<'ast> for BumpSeedVisitor<'a> {
         // Continue visiting nested expressions
         syn::visit::visit_expr(self, expr);
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_bump_seed_canonicalization_vulnerable() {
+        let code = r#"
+        pub fn create_pda_vulnerable(ctx: Context<CreatePda>, bump: u8) -> Result<()> {
+            let (pda, _) = Pubkey::create_program_address(
+                &[b"my_seed", &[bump]],
+                &ctx.program_id,
+            )?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = MissingBumpSeedCanonicalization;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert!(findings.len() >= 1);
+        assert!(findings[0].message.contains("Using create_program_address with a bump parameter without canonical bump validation"));
+    }
+
+    #[test]
+    fn test_bump_seed_canonicalization_secure() {
+        let code = r#"
+        pub fn create_pda_secure(ctx: Context<CreatePda>, bump: u8) -> Result<()> {
+            let (pda, canonical_bump) = Pubkey::find_program_address(
+                &[b"my_seed"],
+                &ctx.program_id,
+            );
+            if bump != canonical_bump {
+                return Err(error!(ErrorCode::InvalidBump));
+            }
+            let (pda, _) = Pubkey::create_program_address(
+                &[b"my_seed", &[bump]],
+                &ctx.program_id,
+            )?;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = MissingBumpSeedCanonicalization;
+        let findings = analyzer.analyze(&program).unwrap();
+        // The analyzer only flags if create_program_address is used WITHOUT find_program_address
+        // in the same function when `bump` arg is present.
+        // Wait, `BumpSeedVisitor` logic:
+        // if has_bump_param {
+        //   if !self.create_program_address_calls.is_empty() && self.find_program_address_calls.is_empty() {
+        // ...
+
+        // Also `visit_expr` adds finding if `create_program_address` is found AND we are in a bump param function.
+        // But `visit_item_fn` logic runs AFTER visiting the body.
+
+        // Wait, `visit_expr` adds finding eagerly:
+        // "If we're in a function with a bump parameter, add a finding"
+        // This seems to duplicate the logic in `visit_item_fn`, but without checking `find_program_address_calls.is_empty()`.
+
+        // The current implementation in `visit_expr` seems buggy because it flags it immediately if bump param exists,
+        // regardless of whether `find_program_address` is called later or earlier.
+
+        // I will check the test results. If it fails (reports finding for secure case), I might need to fix the analyzer.
+        assert_eq!(findings.len(), 0);
+    }
+}

@@ -99,4 +99,60 @@ impl Analyzer for ReentrancyAnalyzer {
 
         Ok(findings)
     }
-} 
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_reentrancy_vulnerable() {
+        let code = r#"
+        #[instruction]
+        pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+            // CPI call
+            solana_program::program::invoke(&instruction, &accounts)?;
+            // State update after CPI
+            ctx.accounts.user.amount -= amount;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ReentrancyAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("contains CPI calls without reentrancy protection"));
+    }
+
+    #[test]
+    fn test_reentrancy_secure_guard() {
+        let code = r#"
+        #[reentry_guard]
+        #[instruction]
+        pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+            solana_program::program::invoke(&instruction, &accounts)?;
+            ctx.accounts.user.amount -= amount;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ReentrancyAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+
+    #[test]
+    fn test_reentrancy_no_cpi() {
+        let code = r#"
+        #[instruction]
+        pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+            ctx.accounts.user.amount -= amount;
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = ReentrancyAnalyzer;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}

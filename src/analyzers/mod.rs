@@ -13,6 +13,9 @@ pub mod account_initialization;
 pub mod account_data_matching;
 pub mod improper_instruction_introspection;
 
+#[cfg(test)]
+pub mod test_utils;
+
 // Common traits and types for analyzers
 use crate::models::*;
 use anyhow::Result;

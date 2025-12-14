@@ -27,6 +27,7 @@ impl Analyzer for TypeCosplay {
                 structs_with_discriminant: HashSet::new(),
                 structs_with_discriminant_check: HashSet::new(),
                 uses_anchor_account: false,
+                current_function_has_discriminant_check: false,
             };
             
             // First pass: collect all structs
@@ -47,6 +48,7 @@ struct TypeCosplayVisitor<'a> {
     structs_with_discriminant: HashSet<String>,
     structs_with_discriminant_check: HashSet<String>,
     uses_anchor_account: bool,
+    current_function_has_discriminant_check: bool,
 }
 
 impl<'a> TypeCosplayVisitor<'a> {
@@ -76,9 +78,43 @@ impl<'a> TypeCosplayVisitor<'a> {
             }
         }
     }
+
+    fn check_account_data_usage(&mut self, expr: &syn::Expr, span: proc_macro2::Span) {
+        if self.current_function_has_discriminant_check {
+            return;
+        }
+
+        let expr_str = expr.to_token_stream().to_string();
+
+        // Check for patterns like &ctx.accounts.user.data.borrow()
+        if expr_str.contains("data") && expr_str.contains("borrow") {
+            self.findings.push(Finding {
+                severity: Severity::High,
+                certainty: Certainty::High,
+                message: "Unsafe try_from_slice on raw account data detected without proper type validation. This could lead to type confusion attacks. Use proper discriminator checks or the Account trait.".to_string(),
+                location: Location {
+                    file: self.file_path.clone(),
+                    line: span.start().line,
+                    column: span.start().column,
+                },
+            });
+        }
+    }
 }
 
 impl<'a, 'ast> Visit<'ast> for TypeCosplayVisitor<'a> {
+    fn visit_item_fn(&mut self, func: &'ast syn::ItemFn) {
+        // Check if function body has discriminant check
+        let mut checker = DiscriminantCheckFinder { has_check: false };
+        checker.visit_block(&func.block);
+        self.current_function_has_discriminant_check = checker.has_check;
+
+        // Visit function body
+        syn::visit::visit_item_fn(self, func);
+
+        self.current_function_has_discriminant_check = false;
+    }
+
     fn visit_item_struct(&mut self, item_struct: &'ast syn::ItemStruct) {
         let struct_name = item_struct.ident.to_string();
         
@@ -127,12 +163,13 @@ impl<'a, 'ast> Visit<'ast> for TypeCosplayVisitor<'a> {
             // Check for try_from_slice calls
             syn::Expr::Call(call) => {
                 if let syn::Expr::Path(path) = &*call.func {
-                    let path_str = path.path.to_token_stream().to_string();
-                    
-                    if path_str.ends_with("::try_from_slice") {
-                        // Check if this is a call on account data
-                        if let Some(arg) = call.args.first() {
-                            self.check_account_data_usage(arg, call.span());
+                    let segments: Vec<String> = path.path.segments.iter().map(|s| s.ident.to_string()).collect();
+                    if let Some(last) = segments.last() {
+                        if last == "try_from_slice" {
+                            // Check if this is a call on account data
+                            if let Some(arg) = call.args.first() {
+                                self.check_account_data_usage(arg, call.span());
+                            }
                         }
                     }
                 }
@@ -142,36 +179,9 @@ impl<'a, 'ast> Visit<'ast> for TypeCosplayVisitor<'a> {
                     self.check_account_data_usage(&method_call.receiver, method_call.span());
                 }
             },
-            // Check for discriminant validation
+            // Check for discriminant validation (for struct tracking)
             syn::Expr::Binary(bin_expr) => {
-                // Look for expressions like: user.discriminant == AccountDiscriminant::User
-                if let syn::Expr::Field(field_expr) = &*bin_expr.left {
-                    if field_expr.member.to_token_stream().to_string() == "discriminant" {
-                        if let syn::Expr::Path(path) = &*field_expr.base {
-                            let struct_name = path.path.segments.last()
-                                .map(|seg| seg.ident.to_string())
-                                .unwrap_or_default();
-                            
-                            if !struct_name.is_empty() {
-                                self.structs_with_discriminant_check.insert(struct_name);
-                            }
-                        }
-                    }
-                }
-                
-                if let syn::Expr::Field(field_expr) = &*bin_expr.right {
-                    if field_expr.member.to_token_stream().to_string() == "discriminant" {
-                        if let syn::Expr::Path(path) = &*field_expr.base {
-                            let struct_name = path.path.segments.last()
-                                .map(|seg| seg.ident.to_string())
-                                .unwrap_or_default();
-                            
-                            if !struct_name.is_empty() {
-                                self.structs_with_discriminant_check.insert(struct_name);
-                            }
-                        }
-                    }
-                }
+                self.check_binary_for_struct_discriminant(bin_expr);
             },
             _ => {}
         }
@@ -183,135 +193,94 @@ impl<'a, 'ast> Visit<'ast> for TypeCosplayVisitor<'a> {
         
         // Check for discriminant validation in if conditions
         if let syn::Expr::Binary(bin_expr) = &*if_expr.cond {
-            // Look for expressions like: user.discriminant != AccountDiscriminant::User
-            if let syn::Expr::Field(field_expr) = &*bin_expr.left {
-                if field_expr.member.to_token_stream().to_string() == "discriminant" {
-                    if let syn::Expr::Path(path) = &*field_expr.base {
-                        let struct_name = path.path.segments.last()
-                            .map(|seg| seg.ident.to_string())
-                            .unwrap_or_default();
-                        
-                        if !struct_name.is_empty() {
-                            self.structs_with_discriminant_check.insert(struct_name);
-                        }
-                    }
-                }
-            }
-            
-            if let syn::Expr::Field(field_expr) = &*bin_expr.right {
-                if field_expr.member.to_token_stream().to_string() == "discriminant" {
-                    if let syn::Expr::Path(path) = &*field_expr.base {
-                        let struct_name = path.path.segments.last()
-                            .map(|seg| seg.ident.to_string())
-                            .unwrap_or_default();
-                        
-                        if !struct_name.is_empty() {
-                            self.structs_with_discriminant_check.insert(struct_name);
-                        }
-                    }
-                }
-            }
+            self.check_binary_for_struct_discriminant(bin_expr);
         }
-    }
-    
-    fn visit_file(&mut self, file: &'ast syn::File) {
-        // Check for try_from_slice usage on account data
-        for item in &file.items {
-            if let syn::Item::Fn(func) = item {
-                let func_name = func.sig.ident.to_string();
-                
-                // Look for patterns like in the insecure example
-                if func_name.contains("update") || func_name.contains("process") {
-                    let mut has_try_from_slice = false;
-                    let mut has_discriminant_check = false;
-                    
-                    // Traverse the function body
-                    for stmt in &func.block.stmts {
-                        if let syn::Stmt::Local(local) = stmt {
-                            if let Some(init) = &local.init {
-                                if let syn::Expr::Call(call) = &*init.expr {
-                                    if let syn::Expr::Path(path) = &*call.func {
-                                        let path_str = path.path.to_token_stream().to_string();
-                                        if path_str.ends_with("::try_from_slice") {
-                                            has_try_from_slice = true;
-                                            
-                                            // Check if this is a call on account data
-                                            if let Some(arg) = call.args.first() {
-                                                let arg_str = arg.to_token_stream().to_string();
-                                                if arg_str.contains("data") && arg_str.contains("borrow") {
-                                                    // This is a try_from_slice on account data
-                                                    self.findings.push(Finding {
-                                                        severity: Severity::High,
-                                                        certainty: Certainty::High,
-                                                        message: "Unsafe try_from_slice on raw account data detected without proper type validation. This could lead to type confusion attacks. Use proper discriminator checks or the Account trait.".to_string(),
-                                                        location: Location {
-                                                            file: self.file_path.clone(),
-                                                            line: call.span().start().line,
-                                                            column: call.span().start().column,
-                                                        },
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else if let syn::Stmt::Expr(expr, _) = stmt {
-                            if let syn::Expr::If(if_expr) = expr {
-                                if let syn::Expr::Binary(bin_expr) = &*if_expr.cond {
-                                    // Check for discriminant validation
-                                    let left_str = bin_expr.left.to_token_stream().to_string();
-                                    let right_str = bin_expr.right.to_token_stream().to_string();
-                                    
-                                    if left_str.contains("discriminant") || right_str.contains("discriminant") {
-                                        has_discriminant_check = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // If we have try_from_slice without discriminant check, it's a vulnerability
-                    if has_try_from_slice && !has_discriminant_check {
-                        self.findings.push(Finding {
-                            severity: Severity::High,
-                            certainty: Certainty::High,
-                            message: format!(
-                                "Function {} uses try_from_slice without proper type validation. This could enable type confusion attacks. Add discriminant checks or use the Account trait.",
-                                func_name
-                            ),
-                            location: Location {
-                                file: self.file_path.clone(),
-                                line: func.span().start().line,
-                                column: func.span().start().column,
-                            },
-                        });
-                    }
-                }
-            }
-        }
-        
-        // Visit all items in the file
-        syn::visit::visit_file(self, file);
     }
 }
 
 impl<'a> TypeCosplayVisitor<'a> {
-    fn check_account_data_usage(&mut self, expr: &syn::Expr, span: proc_macro2::Span) {
-        let expr_str = expr.to_token_stream().to_string();
-        
-        // Check for patterns like &ctx.accounts.user.data.borrow()
-        if expr_str.contains("data") && expr_str.contains("borrow") {
-            self.findings.push(Finding {
-                severity: Severity::High,
-                certainty: Certainty::High,
-                message: "Unsafe try_from_slice on raw account data detected. This could lead to type confusion attacks. Use proper type validation, discriminators, or Account trait.".to_string(),
-                location: Location {
-                    file: self.file_path.clone(),
-                    line: span.start().line,
-                    column: span.start().column,
-                },
-            });
+    fn check_binary_for_struct_discriminant(&mut self, bin_expr: &syn::ExprBinary) {
+        // Helper to check one side of binary expr
+        let check_side = |expr: &syn::Expr| -> Option<String> {
+            if let syn::Expr::Field(field_expr) = expr {
+                if field_expr.member.to_token_stream().to_string() == "discriminant" {
+                    if let syn::Expr::Path(path) = &*field_expr.base {
+                        return path.path.segments.last()
+                            .map(|seg| seg.ident.to_string());
+                    }
+                }
+            }
+            None
+        };
+
+        if let Some(struct_name) = check_side(&*bin_expr.left) {
+            self.structs_with_discriminant_check.insert(struct_name);
+        }
+        if let Some(struct_name) = check_side(&*bin_expr.right) {
+            self.structs_with_discriminant_check.insert(struct_name);
         }
     }
-} 
+}
+
+struct DiscriminantCheckFinder {
+    has_check: bool,
+}
+
+impl<'ast> Visit<'ast> for DiscriminantCheckFinder {
+    fn visit_expr_binary(&mut self, bin_expr: &'ast syn::ExprBinary) {
+        let left_str = bin_expr.left.to_token_stream().to_string();
+        let right_str = bin_expr.right.to_token_stream().to_string();
+
+        if left_str.contains("discriminant") || right_str.contains("discriminant") {
+            self.has_check = true;
+        }
+        
+        // Also check recursive if we want, but binary op usually is the check.
+        // But we should visit children in case check is nested?
+        // Usually discriminant check is `a == b`.
+    }
+    // We don't need to visit everything, just binary expressions in the block.
+    // But `visit_block` calls `visit_stmt` which calls `visit_expr`.
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::analyzers::test_utils::create_program;
+
+    #[test]
+    fn test_type_cosplay_vulnerable() {
+        let code = r#"
+        pub fn update(ctx: Context<Update>, data: Vec<u8>) -> Result<()> {
+            let account_info = &ctx.accounts.my_account;
+            let user = User::try_from_slice(&account_info.data.borrow())?;
+            // Using user...
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = TypeCosplay;
+        let findings = analyzer.analyze(&program).unwrap();
+        
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("try_from_slice"));
+    }
+
+    #[test]
+    fn test_type_cosplay_secure() {
+        let code = r#"
+        pub fn update(ctx: Context<Update>, data: Vec<u8>) -> Result<()> {
+            let account_info = &ctx.accounts.my_account;
+            let user = User::try_from_slice(&account_info.data.borrow())?;
+            if user.discriminant != AccountDiscriminant::User {
+                return Err(error!(ErrorCode::InvalidAccountType));
+            }
+            Ok(())
+        }
+        "#;
+        let program = create_program(code);
+        let analyzer = TypeCosplay;
+        let findings = analyzer.analyze(&program).unwrap();
+        assert_eq!(findings.len(), 0);
+    }
+}
