@@ -21,6 +21,7 @@ use crate::analyzers::unauthorized_access::UnauthorizedAccessAnalyzer;
 use crate::analyzers::integer_overflow::IntegerOverflowAnalyzer;
 use crate::analyzers::invalid_sysvar_accounts::InvalidSysvarAccounts;
 use crate::analyzers::improper_instruction_introspection::ImproperInstructionIntrospection;
+use crate::analyzers::account_reloading::AccountReloading;
 use crate::models::Program;
 
 // Re-export types that users of the crate will need
@@ -250,6 +251,7 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         Box::new(UnauthorizedAccessAnalyzer),
         Box::new(IntegerOverflowAnalyzer),
         Box::new(ImproperInstructionIntrospection),
+        Box::new(AccountReloading),
     ];
 
     let mut all_findings = Vec::new();
