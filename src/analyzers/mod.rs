@@ -12,6 +12,7 @@ pub mod arbitrary_cpi;
 pub mod account_initialization;
 pub mod account_data_matching;
 pub mod improper_instruction_introspection;
+pub mod account_reloading;
 
 #[cfg(test)]
 pub mod test_utils;
