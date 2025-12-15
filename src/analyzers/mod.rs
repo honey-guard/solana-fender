@@ -13,6 +13,7 @@ pub mod account_initialization;
 pub mod account_data_matching;
 pub mod improper_instruction_introspection;
 pub mod account_reloading;
+pub mod precision_loss;
 
 #[cfg(test)]
 pub mod test_utils;
