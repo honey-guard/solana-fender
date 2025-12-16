@@ -50,7 +50,7 @@ Add Solana Fender to your program's `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-solana_fender = "0.5.1"  # Replace with the latest version
+solana_fender = "0.5.2"  # Replace with the latest version
 ```
 
 ### Example Usage in Tests
@@ -118,6 +118,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | Unauthorized Access | ✅ |✅ |❓ |❓ |
 | Integer Overflow | ✅ |✅ |✅ |❓ |
 | Precision Loss | ✅ |❓ |❓ |❓ |
+| Insecure Randomness | ✅ |❓ |❓ |❓ |
 
 - `❓` - Could not find documentation if supported.
 - `🚧` - Did not pass all [sealevel-attacks](https://github.com/coral-xyz/sealevel-attacks)

@@ -57,7 +57,7 @@ impl<'a, 'ast> Visit<'ast> for AccountReloadingVisitor<'a> {
     fn visit_expr_call(&mut self, expr: &'ast ExprCall) {
         // Check for CpiContext::new or CpiContext::new_with_signer
         if let Expr::Path(ExprPath { path, .. }) = &*expr.func {
-            let path_str = path.to_token_stream().to_string();
+            let path_str = path.to_token_stream().to_string().replace(" ", "");
             if path_str.contains("CpiContext::new") {
                 // The second argument is the accounts struct
                 if let Some(accounts_arg) = expr.args.iter().nth(1) {

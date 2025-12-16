@@ -23,6 +23,7 @@ use crate::analyzers::invalid_sysvar_accounts::InvalidSysvarAccounts;
 use crate::analyzers::improper_instruction_introspection::ImproperInstructionIntrospection;
 use crate::analyzers::account_reloading::AccountReloading;
 use crate::analyzers::precision_loss::PrecisionLossAnalyzer;
+use crate::analyzers::insecure_randomness::InsecureRandomnessAnalyzer;
 use crate::models::Program;
 
 // Re-export types that users of the crate will need
@@ -254,6 +255,7 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         Box::new(ImproperInstructionIntrospection),
         Box::new(AccountReloading),
         Box::new(PrecisionLossAnalyzer),
+        Box::new(InsecureRandomnessAnalyzer),
     ];
 
     let mut all_findings = Vec::new();
@@ -494,6 +496,8 @@ fn get_recommendation_for_finding(finding: &Finding) -> String {
         "Use checked arithmetic operations to prevent integer overflow/underflow."
     } else if finding.message.contains("sysvar") {
         "Validate sysvar accounts against their proper sysvar::*::ID."
+    } else if finding.message.contains("randomness") {
+        "Use a secure randomness source like an Oracle (e.g. Switchboard, Chainlink) instead of predictable on-chain data."
     } else {
         "Review the code carefully and implement appropriate security measures."
     }.to_string()
