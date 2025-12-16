@@ -14,6 +14,7 @@ pub mod account_data_matching;
 pub mod improper_instruction_introspection;
 pub mod account_reloading;
 pub mod precision_loss;
+pub mod insecure_randomness;
 
 #[cfg(test)]
 pub mod test_utils;
