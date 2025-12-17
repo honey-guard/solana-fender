@@ -50,7 +50,7 @@ Add Solana Fender to your program's `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-solana_fender = "0.5.2"  # Replace with the latest version
+solana_fender = "0.5.3"  # Replace with the latest version
 ```
 
 ### Example Usage in Tests
@@ -107,6 +107,7 @@ Below is a comparison of various static analysis tools available for Solana smar
 | Missing Owner Check | ✅ |✅ |✅ |✅ |
 | Account Data Matching | ✅ |✅ |✅ |✅ |
 | Account Initialization | ✅ |✅ | ✅|✅ |
+| Initialization Frontrunning | ✅ |❓ |❓ |❓ |
 | Arbitrary CPI | ✅ |✅ |❓ |✅ |
 | Closing Accounts | ✅ |✅ |❓ |🚧 |
 | Duplicate Mutable Accounts | ✅ |✅ |❓ |✅ |

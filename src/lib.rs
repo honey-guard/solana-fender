@@ -10,6 +10,7 @@ use crate::analyzers::Analyzer;
 use crate::analyzers::missing_owner::MissingOwnerCheck;
 use crate::analyzers::account_data_matching::AccountDataMatching;
 use crate::analyzers::account_initialization::AccountInitialization;
+use crate::analyzers::initialization_frontrunning::InitializationFrontrunning;
 use crate::analyzers::arbitrary_cpi::ArbitraryCpi;
 use crate::analyzers::closing_accounts::ClosingAccounts;
 use crate::analyzers::duplicate_mutable_accounts::DuplicateMutableAccounts;
@@ -242,6 +243,7 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         Box::new(MissingOwnerCheck),
         Box::new(AccountDataMatching),
         Box::new(AccountInitialization),
+        Box::new(InitializationFrontrunning),
         Box::new(ArbitraryCpi),
         Box::new(ClosingAccounts),
         Box::new(DuplicateMutableAccounts),
