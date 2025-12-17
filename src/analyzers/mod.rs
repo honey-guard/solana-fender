@@ -10,6 +10,7 @@ pub mod bump_seed_canonicalization;
 pub mod duplicate_mutable_accounts;
 pub mod arbitrary_cpi;
 pub mod account_initialization;
+pub mod initialization_frontrunning;
 pub mod account_data_matching;
 pub mod improper_instruction_introspection;
 pub mod account_reloading;
