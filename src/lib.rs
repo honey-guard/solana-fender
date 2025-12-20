@@ -25,6 +25,7 @@ use crate::analyzers::improper_instruction_introspection::ImproperInstructionInt
 use crate::analyzers::account_reloading::AccountReloading;
 use crate::analyzers::precision_loss::PrecisionLossAnalyzer;
 use crate::analyzers::insecure_randomness::InsecureRandomnessAnalyzer;
+use crate::analyzers::seed_collision::SeedCollision;
 use crate::models::Program;
 
 // Re-export types that users of the crate will need
@@ -258,6 +259,7 @@ fn run_analyzers(program: &Program) -> Result<Vec<Finding>> {
         Box::new(AccountReloading),
         Box::new(PrecisionLossAnalyzer),
         Box::new(InsecureRandomnessAnalyzer),
+        Box::new(SeedCollision),
     ];
 
     let mut all_findings = Vec::new();

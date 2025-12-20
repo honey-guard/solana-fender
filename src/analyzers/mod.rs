@@ -16,6 +16,7 @@ pub mod improper_instruction_introspection;
 pub mod account_reloading;
 pub mod precision_loss;
 pub mod insecure_randomness;
+pub mod seed_collision;
 
 #[cfg(test)]
 pub mod test_utils;
